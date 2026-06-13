@@ -305,6 +305,52 @@ export function AdminPage() {
 
   const setField = (field: keyof MatchFormData, value: string) => setForm(f => ({ ...f, [field]: value }))
 
+  function buildDiffRows(req: MatchChangeRequest, homeTeam: Team | undefined, awayTeam: Team | undefined) {
+    const cur = req.match!
+    const prop = req.proposed_data
+    const curHome = teams.find(t => t.id === cur.home_team_id)
+    const curAway = teams.find(t => t.id === cur.away_team_id)
+    const rows: { label: string; before: string; after: string; changed: boolean }[] = []
+
+    const stageB = cur.stage ? t(`stages.${cur.stage}`) : '—'
+    const stageA = prop.stage ? t(`stages.${prop.stage}`) : '—'
+    rows.push({ label: t('admin.stage'), before: stageB, after: stageA, changed: stageB !== stageA })
+
+    const homeB = curHome ? getTeamName(curHome, i18n.language) : String(cur.home_team_id)
+    const homeA = homeTeam ? getTeamName(homeTeam, i18n.language) : String(prop.home_team_id)
+    const homeLabel = `${t('admin.homeTeam')} (${homeB})`
+    rows.push({ label: homeLabel, before: homeB, after: homeA, changed: homeB !== homeA })
+
+    const awayB = curAway ? getTeamName(curAway, i18n.language) : String(cur.away_team_id)
+    const awayA = awayTeam ? getTeamName(awayTeam, i18n.language) : String(prop.away_team_id)
+    const awayLabel = `${t('admin.awayTeam')} (${awayB})`
+    rows.push({ label: awayLabel, before: awayB, after: awayA, changed: awayB !== awayA })
+
+    const dateB = cur.match_date ? format(new Date(cur.match_date), 'PPp') : '—'
+    const dateA = prop.match_date ? format(new Date(prop.match_date), 'PPp') : '—'
+    rows.push({ label: t('admin.matchDate'), before: dateB, after: dateA, changed: dateB !== dateA })
+
+    const venueB = cur.venue ?? '—'
+    const venueA = prop.venue ?? '—'
+    rows.push({ label: t('admin.venue'), before: venueB, after: venueA, changed: venueB !== venueA })
+
+    const statusB = cur.status ? t(`matches.status.${cur.status}`) : '—'
+    const statusA = prop.status ? t(`matches.status.${prop.status}`) : '—'
+    rows.push({ label: t('admin.status'), before: statusB, after: statusA, changed: statusB !== statusA })
+
+    const homeScoreB = cur.home_score != null ? String(cur.home_score) : '—'
+    const homeScoreA = prop.home_score != null ? String(prop.home_score) : '—'
+    const homeScoreLabel = curHome ? `${t('admin.homeScore')} (${getTeamName(curHome, i18n.language)})` : t('admin.homeScore')
+    rows.push({ label: homeScoreLabel, before: homeScoreB, after: homeScoreA, changed: homeScoreB !== homeScoreA })
+
+    const awayScoreB = cur.away_score != null ? String(cur.away_score) : '—'
+    const awayScoreA = prop.away_score != null ? String(prop.away_score) : '—'
+    const awayScoreLabel = curAway ? `${t('admin.awayScore')} (${getTeamName(curAway, i18n.language)})` : t('admin.awayScore')
+    rows.push({ label: awayScoreLabel, before: awayScoreB, after: awayScoreA, changed: awayScoreB !== awayScoreA })
+
+    return rows
+  }
+
   if (loading) return <div className="text-center py-20 text-muted-foreground">{t('common.loading')}</div>
 
   if (!user) {
@@ -424,24 +470,20 @@ export function AdminPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {req.match && (
-                      <div className="flex items-center gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm">
-                        {(() => {
-                          const mHome = teams.find(t => t.id === req.match!.home_team_id)
-                          const mAway = teams.find(t => t.id === req.match!.away_team_id)
-                          return (
-                            <>
-                              {mHome?.flag_url && <img src={mHome.flag_url} alt="" className="h-5 w-5 object-cover rounded-sm" />}
-                              <span className="font-semibold">{mHome ? getTeamName(mHome, i18n.language) : req.match!.home_team_id}</span>
-                              <span className="text-muted-foreground">vs</span>
-                              <span className="font-semibold">{mAway ? getTeamName(mAway, i18n.language) : req.match!.away_team_id}</span>
-                              {mAway?.flag_url && <img src={mAway.flag_url} alt="" className="h-5 w-5 object-cover rounded-sm" />}
-                              <span className="ml-auto text-xs text-muted-foreground">{req.match!.match_date ? format(new Date(req.match!.match_date), 'PPp') : ''}</span>
-                            </>
-                          )
-                        })()}
-                      </div>
-                    )}
+                    {req.match && (() => {
+                      const mHome = teams.find(t => t.id === req.match!.home_team_id)
+                      const mAway = teams.find(t => t.id === req.match!.away_team_id)
+                      return (
+                        <div className="flex items-center gap-3 rounded-md bg-muted/50 px-3 py-2 text-sm">
+                          {mHome?.flag_url && <img src={mHome.flag_url} alt="" className="h-5 w-5 object-cover rounded-sm" />}
+                          <span className="font-semibold">{mHome ? getTeamName(mHome, i18n.language) : req.match!.home_team_id}</span>
+                          <span className="text-muted-foreground">vs</span>
+                          <span className="font-semibold">{mAway ? getTeamName(mAway, i18n.language) : req.match!.away_team_id}</span>
+                          {mAway?.flag_url && <img src={mAway.flag_url} alt="" className="h-5 w-5 object-cover rounded-sm" />}
+                          <span className="ml-auto text-xs text-muted-foreground">{req.match!.match_date ? format(new Date(req.match!.match_date), 'PPp') : ''}</span>
+                        </div>
+                      )
+                    })()}
                     {(req.request_type === 'finish' || req.request_type === 'update') && req.match ? (
                       <div className="rounded-md border text-sm overflow-hidden">
                         <div className="grid grid-cols-3 bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -449,55 +491,13 @@ export function AdminPage() {
                           <span className="text-red-600">{t('admin.before')}</span>
                           <span className="text-green-600">{t('admin.after')}</span>
                         </div>
-                        {(() => {
-                          const cur = req.match!
-                          const prop = req.proposed_data
-                          const curHome = teams.find(t => t.id === cur.home_team_id)
-                          const curAway = teams.find(t => t.id === cur.away_team_id)
-                          const rows: { label: string; before: string; after: string; changed: boolean }[] = []
-
-                          const stageB = cur.stage ? t(`stages.${cur.stage}`) : '—'
-                          const stageA = prop.stage ? t(`stages.${prop.stage}`) : '—'
-                          rows.push({ label: t('admin.stage'), before: stageB, after: stageA, changed: stageB !== stageA })
-
-                          const homeB = curHome ? getTeamName(curHome, i18n.language) : String(cur.home_team_id)
-                          const homeA = homeTeam ? getTeamName(homeTeam, i18n.language) : String(prop.home_team_id)
-                          rows.push({ label: t('admin.homeTeam'), before: homeB, after: homeA, changed: homeB !== homeA })
-
-                          const awayB = curAway ? getTeamName(curAway, i18n.language) : String(cur.away_team_id)
-                          const awayA = awayTeam ? getTeamName(awayTeam, i18n.language) : String(prop.away_team_id)
-                          rows.push({ label: t('admin.awayTeam'), before: awayB, after: awayA, changed: awayB !== awayA })
-
-                          const dateB = cur.match_date ? format(new Date(cur.match_date), 'PPp') : '—'
-                          const dateA = prop.match_date ? format(new Date(prop.match_date), 'PPp') : '—'
-                          rows.push({ label: t('admin.matchDate'), before: dateB, after: dateA, changed: dateB !== dateA })
-
-                          const venueB = cur.venue ?? '—'
-                          const venueA = prop.venue ?? '—'
-                          rows.push({ label: t('admin.venue'), before: venueB, after: venueA, changed: venueB !== venueA })
-
-                          const statusB = cur.status ? t(`matches.status.${cur.status}`) : '—'
-                          const statusA = prop.status ? t(`matches.status.${prop.status}`) : '—'
-                          rows.push({ label: t('admin.status'), before: statusB, after: statusA, changed: statusB !== statusA })
-
-                          const homeScoreB = cur.home_score != null ? String(cur.home_score) : '—'
-                          const homeScoreA = prop.home_score != null ? String(prop.home_score) : '—'
-                          const homeScoreLabel = curHome ? `${t('admin.homeScore')} (${getTeamName(curHome, i18n.language)})` : t('admin.homeScore')
-                          rows.push({ label: homeScoreLabel, before: homeScoreB, after: homeScoreA, changed: homeScoreB !== homeScoreA })
-
-                          const awayScoreB = cur.away_score != null ? String(cur.away_score) : '—'
-                          const awayScoreA = prop.away_score != null ? String(prop.away_score) : '—'
-                          const awayScoreLabel = curAway ? `${t('admin.awayScore')} (${getTeamName(curAway, i18n.language)})` : t('admin.awayScore')
-                          rows.push({ label: awayScoreLabel, before: awayScoreB, after: awayScoreA, changed: awayScoreB !== awayScoreA })
-
-                          return rows.map((row, i) => (
-                            <div key={i} className={`grid grid-cols-3 border-t px-3 py-2 ${row.changed ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
-                              <span className="text-muted-foreground text-xs">{row.label}</span>
-                              <span className={`text-xs ${row.changed ? 'line-through text-red-500' : 'text-foreground'}`}>{row.before}</span>
-                              <span className={`text-xs font-medium ${row.changed ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>{row.after}</span>
-                            </div>
-                          ))
-                        })()}
+                        {buildDiffRows(req, homeTeam, awayTeam).map((row, i) => (
+                          <div key={i} className={`grid grid-cols-3 border-t px-3 py-2 ${row.changed ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
+                            <span className="text-muted-foreground text-xs">{row.label}</span>
+                            <span className={`text-xs ${row.changed ? 'line-through text-red-500' : 'text-foreground'}`}>{row.before}</span>
+                            <span className={`text-xs font-medium ${row.changed ? 'text-green-700 dark:text-green-400' : 'text-foreground'}`}>{row.after}</span>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div className="rounded-md border text-sm overflow-hidden">
