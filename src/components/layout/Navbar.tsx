@@ -66,7 +66,7 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 font-bold text-primary">
-          <span className="text-2xl">⚽</span>
+          <img src="/logo.png" alt="Logo" className="h-8 w-auto" />
           <span className="hidden sm:inline text-sm font-semibold">Mundial 2026</span>
         </Link>
 

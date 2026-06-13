@@ -56,7 +56,7 @@ export function LoginPage() {
     <div className="flex min-h-[70vh] items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="text-5xl mb-2">⚽</div>
+          <img src="/logo.png" alt="Logo" className="h-16 w-auto mb-2 mx-auto" />
           <CardTitle className="text-2xl">{t('app.title')}</CardTitle>
           <CardDescription>{t('app.subtitle')}</CardDescription>
         </CardHeader>
