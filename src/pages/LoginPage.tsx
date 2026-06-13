@@ -35,8 +35,8 @@ export function LoginPage() {
       if (error) {
         toast({ title: error.message, variant: 'destructive' })
       } else {
-        toast({ title: t('auth.signUpSuccess') })
-        setMode('signin')
+        toast({ title: t('auth.signUpSuccess'), variant: 'default' })
+        navigate('/')
       }
     } else {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
