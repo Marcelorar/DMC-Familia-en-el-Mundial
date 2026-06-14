@@ -291,16 +291,25 @@ export function AdminPage() {
     const data = request.proposed_data
     if (request.request_type === 'create') {
       await supabase.from('matches').insert(data)
+      await supabase.from('match_change_requests').update({ status: 'approved' }).eq('id', request.id)
     } else if (request.request_type === 'finish' && request.match_id) {
-      await supabase.from('matches')
-        .update({ status: 'completed', home_score: data.home_score, away_score: data.away_score })
-        .eq('id', request.match_id)
-      // Grade all predictions for this match
-      await supabase.rpc('grade_predictions', { p_match_id: request.match_id })
+      // Offload match update + prediction grading to an Edge Function to avoid blocking the UI
+      const { error } = await supabase.functions.invoke('grade-match', {
+        body: {
+          match_id: request.match_id,
+          home_score: data.home_score,
+          away_score: data.away_score,
+          change_request_id: request.id,
+        },
+      })
+      if (error) {
+        toast({ title: t('common.error'), variant: 'destructive' })
+        return
+      }
     } else if (request.match_id) {
       await supabase.from('matches').update(data).eq('id', request.match_id)
+      await supabase.from('match_change_requests').update({ status: 'approved' }).eq('id', request.id)
     }
-    await supabase.from('match_change_requests').update({ status: 'approved' }).eq('id', request.id)
   }
 
   const setField = (field: keyof MatchFormData, value: string) => setForm(f => ({ ...f, [field]: value }))
