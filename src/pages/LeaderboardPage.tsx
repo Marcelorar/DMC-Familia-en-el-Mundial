@@ -10,6 +10,7 @@ interface LeaderboardEntry {
   display_name: string
   total_points: number
   correct_results: number
+  partial_results: number
   total_predictions: number
 }
 
@@ -74,7 +75,7 @@ export function LeaderboardPage() {
                   <div className="flex-1">
                     <p className="font-medium">{entry.display_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {entry.correct_results}/{entry.total_predictions} {t('leaderboard.correct')}
+                      🎯 {entry.correct_results} · ✅ {entry.partial_results} · ❌ {entry.total_predictions}
                     </p>
                   </div>
 
