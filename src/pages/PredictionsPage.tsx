@@ -169,9 +169,9 @@ export function PredictionsPage() {
         if (m.home_team_id !== teamBId && m.away_team_id !== teamBId) return false
       }
 
-      // Date filter
+      // Date filter (compare in local timezone)
       if (dateFilter) {
-        const matchDay = m.match_date.slice(0, 10)
+        const matchDay = new Date(m.match_date).toLocaleDateString('en-CA') // YYYY-MM-DD in local tz
         if (matchDay !== dateFilter) return false
       }
 

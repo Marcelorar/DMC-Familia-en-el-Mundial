@@ -98,9 +98,9 @@ export function AllPredictionsPage() {
         if (!name.includes(q) && !email.includes(q)) return false
       }
 
-      // Date filter
+      // Date filter (compare in local timezone)
       if (dateFilter) {
-        const matchDay = match.match_date.slice(0, 10)
+        const matchDay = new Date(match.match_date).toLocaleDateString('en-CA') // YYYY-MM-DD in local tz
         if (matchDay !== dateFilter) return false
       }
 
