@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Target, CheckCircle2, XCircle, BarChart2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface LeaderboardEntry {
   user_id: string
@@ -74,9 +76,39 @@ export function LeaderboardPage() {
                   {/* Name */}
                   <div className="flex-1">
                     <p className="font-medium">{entry.display_name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      🎯 {entry.correct_results} · ✅ {entry.partial_results} · ❌ {entry.total_predictions}
-                    </p>
+                    <TooltipProvider>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Target className="h-3 w-3 text-green-500" />
+                              {entry.correct_results}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('leaderboard.scoringExact')}</TooltipContent>
+                        </Tooltip>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <CheckCircle2 className="h-3 w-3 text-yellow-500" />
+                              {entry.partial_results}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('leaderboard.scoringResult')}</TooltipContent>
+                        </Tooltip>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <XCircle className="h-3 w-3 text-red-500" />
+                              {entry.total_predictions}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{t('leaderboard.scoringWrong')}</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
                   </div>
 
                   {/* Points */}
@@ -93,11 +125,14 @@ export function LeaderboardPage() {
       {/* Scoring legend */}
       <Card className="bg-muted/50">
         <CardContent className="pt-4 pb-4">
-          <p className="text-sm font-medium mb-2">📊 {t('leaderboard.scoringTitle')}</p>
+          <p className="flex items-center gap-2 text-sm font-medium mb-2">
+            <BarChart2 className="h-4 w-4" />
+            {t('leaderboard.scoringTitle')}
+          </p>
           <ul className="text-xs text-muted-foreground space-y-1">
-            <li>🎯 {t('leaderboard.scoringExact')}</li>
-            <li>✅ {t('leaderboard.scoringResult')}</li>
-            <li>❌ {t('leaderboard.scoringWrong')}</li>
+            <li className="flex items-center gap-2"><Target className="h-3 w-3 text-green-500" /> {t('leaderboard.scoringExact')}</li>
+            <li className="flex items-center gap-2"><CheckCircle2 className="h-3 w-3 text-yellow-500" /> {t('leaderboard.scoringResult')}</li>
+            <li className="flex items-center gap-2"><XCircle className="h-3 w-3 text-red-500" /> {t('leaderboard.scoringWrong')}</li>
           </ul>
         </CardContent>
       </Card>
