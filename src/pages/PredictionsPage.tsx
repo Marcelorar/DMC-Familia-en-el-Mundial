@@ -179,11 +179,6 @@ export function PredictionsPage() {
                                 {t('matches.group', { group: match.home_team.group_name.toUpperCase() })}
                               </span>
                             )}
-                            {prediction && prediction.result !== 'proposed' && (
-                              <Badge variant={resultBadgeVariant(prediction.result)} className="text-xs">
-                                {t(`predictions.result.${prediction.result}`)}
-                              </Badge>
-                            )}
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
@@ -225,11 +220,18 @@ export function PredictionsPage() {
                         {user ? (
                           <div className="border-t pt-2">
                             {prediction ? (
-                              <p className="text-xs text-center text-muted-foreground">
+                              <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-2">
                                 {t('predictions.yourPrediction')}:{' '}
                                 <span className="font-semibold text-foreground">
                                   {prediction.predicted_home_score} – {prediction.predicted_away_score}
                                 </span>
+                                <span>
+                                {prediction && prediction.result !== 'proposed' && (
+                                    <Badge variant={resultBadgeVariant(prediction.result)} className="text-xs">
+                                      {t(`predictions.result.${prediction.result}`)}
+                                    </Badge>
+                                )}
+                                  </span>
                               </p>
                             ) : (
                               <p className="text-xs text-center text-muted-foreground">{t('predictions.noPrediction')}</p>

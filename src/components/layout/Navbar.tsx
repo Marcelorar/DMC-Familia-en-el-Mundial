@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Trophy, BarChart2, Settings, LogIn, Globe, ChevronDown } from 'lucide-react'
+import { Trophy, BarChart2, Settings, LogIn, Globe, ChevronDown, List } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import i18n from '@/i18n/index'
 import { useState, useRef, useEffect } from 'react'
@@ -58,6 +58,7 @@ export function Navbar() {
   const navLinks = [
     { to: '/', label: t('nav.predictions'), icon: <Trophy className="h-4 w-4" /> },
     { to: '/leaderboard', label: t('nav.leaderboard'), icon: <BarChart2 className="h-4 w-4" /> },
+    { to: '/all-predictions', label: t('nav.allPredictions'), icon: <List className="h-4 w-4" /> },
     { to: '/admin', label: t('nav.admin'), icon: <Settings className="h-4 w-4" /> },
   ]
 

@@ -7,6 +7,7 @@
     "predictions": "Pronostici",
     "leaderboard": "Classifica",
     "admin": "Amministrazione",
+    "allPredictions": "Tutti i pronostici",
     "login": "Accedi",
     "logout": "Esci",
     "profile": "Profilo"
@@ -74,6 +75,7 @@
     "awayScore": "Gol ospite",
     "yourPrediction": "Il tuo pronostico",
     "allPredictions": "Tutti i pronostici",
+    "allPredictionsPage": "Tutti i pronostici",
     "loginToPredict": "Accedi per fare pronostici",
     "result": {
       "correct": "Corretto",
@@ -142,6 +144,13 @@
       "update": "Aggiorna Partita",
       "finish": "Termina Partita"
     }
+  },
+  "allPredictions": {
+    "teamA": "Squadra A",
+    "teamB": "Squadra B",
+    "user": "Utente",
+    "prediction": "Pronostico",
+    "result": "Risultato"
   },
   "common": {
     "loading": "Caricamento...",

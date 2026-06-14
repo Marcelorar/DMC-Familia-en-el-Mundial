@@ -7,6 +7,7 @@
     "predictions": "Predictions",
     "leaderboard": "Leaderboard",
     "admin": "Admin",
+    "allPredictions": "All Predictions",
     "login": "Login",
     "logout": "Logout",
     "profile": "Profile"
@@ -74,6 +75,7 @@
     "awayScore": "Away Score",
     "yourPrediction": "Your prediction",
     "allPredictions": "All Predictions",
+    "allPredictionsPage": "All Predictions",
     "loginToPredict": "Login to make predictions",
     "result": {
       "correct": "Correct",
@@ -142,6 +144,13 @@
       "update": "Update Match",
       "finish": "Finish Match"
     }
+  },
+  "allPredictions": {
+    "teamA": "Team A",
+    "teamB": "Team B",
+    "user": "User",
+    "prediction": "Prediction",
+    "result": "Result"
   },
   "common": {
     "loading": "Loading...",
