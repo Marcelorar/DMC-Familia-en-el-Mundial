@@ -13,8 +13,8 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     const { match_id, home_score, away_score, change_request_id } = await req.json()
 
@@ -32,8 +32,9 @@ serve(async (req) => {
       .eq('id', match_id)
 
     if (matchError) {
+      console.log('[DEBUG] step=update_match error:', matchError.message)
       return new Response(
-        JSON.stringify({ error: matchError.message }),
+        JSON.stringify({ error: `update_match: ${matchError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -42,8 +43,9 @@ serve(async (req) => {
     const { error: gradeError } = await supabase.rpc('grade_predictions', { p_match_id: match_id })
 
     if (gradeError) {
+      console.log('[DEBUG] step=grade_predictions error:', gradeError.message)
       return new Response(
-        JSON.stringify({ error: gradeError.message }),
+        JSON.stringify({ error: `grade_predictions: ${gradeError.message}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

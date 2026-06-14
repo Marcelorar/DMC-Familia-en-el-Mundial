@@ -23,7 +23,18 @@ begin
 end;
 $$;
 
-grant execute on function public.grade_predictions(integer) to service_role, authenticated;
+grant execute on function public.grade_predictions(integer) to service_role, authenticated, anon;
 
--- Grant EXECUTE on the function to anon so the edge function (anon key) can call it via RPC
-grant execute on function public.grade_predictions(integer) to anon;
+-- Grant table privileges to service_role for direct table operations in the edge function
+-- (service_role bypasses RLS but still needs PostgreSQL-level table privileges)
+grant select, update on public.matches to service_role;
+grant select, update on public.predictions to service_role;
+grant select, update on public.match_change_requests to service_role;
+
+-- Helper function to expose the current DB role for debugging
+create or replace function public.get_current_role()
+returns text language sql security definer as $$
+  select current_role;
+$$;
+
+grant execute on function public.get_current_role() to anon, authenticated, service_role;
