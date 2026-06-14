@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n/index'
 import { useAuth } from '@/context/AuthContext'
 import { supabase } from '@/lib/supabase'
 import { getTeamName } from '@/lib/teamUtils'
-import { Match, Prediction, PredictionResult, TournamentStage } from '@/types'
+import { Match, Prediction, PredictionResult, TournamentStage, Team } from '@/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
+import { TeamSelect } from '@/components/ui/team-select'
 
 const STAGES: TournamentStage[] = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'F']
 
@@ -25,10 +26,13 @@ function resultBadgeVariant(result: PredictionResult): 'default' | 'secondary' |
   return 'outline'
 }
 
+const ALL_STATUSES = ['scheduled', 'live', 'completed']
+
 export function PredictionsPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const [matches, setMatches] = useState<Match[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
   const [predictions, setPredictions] = useState<Record<string | number, Prediction>>({})
   const [loading, setLoading] = useState(true)
   const [activeStage, setActiveStage] = useState<TournamentStage>('GROUP')
@@ -39,10 +43,22 @@ export function PredictionsPage() {
   const [saving, setSaving] = useState(false)
   const [predictionErrors, setPredictionErrors] = useState<{ home?: string; away?: string }>({})
 
+  // Filters
+  const [teamAId, setTeamAId] = useState<number | null>(null)
+  const [teamBId, setTeamBId] = useState<number | null>(null)
+  const [dateFilter, setDateFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string[]>(['live', 'scheduled'])
+
   useEffect(() => {
     fetchMatches()
+    fetchTeams()
     if (user) fetchPredictions()
   }, [user])
+
+  async function fetchTeams() {
+    const { data } = await supabase.from('teams').select('*').order('name', { ascending: true })
+    if (data) setTeams(data as Team[])
+  }
 
   async function fetchMatches() {
     setLoading(true)
@@ -119,8 +135,6 @@ export function PredictionsPage() {
     setSaving(false)
   }
 
-  const stageMatches = matches.filter(m => m.stage === activeStage)
-
   const isMatchLive = (match: Match): boolean => {
     if (match.status === 'completed') return false
     const start = new Date(match.match_date).getTime()
@@ -135,6 +149,43 @@ export function PredictionsPage() {
     return 'outline'
   }
 
+  function toggleStatus(s: string) {
+    setStatusFilter(prev =>
+      prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]
+    )
+  }
+
+  const stageMatches = useMemo(() => {
+    return matches.filter(m => {
+      if (m.stage !== activeStage) return false
+
+      // Team A / Team B (non-directional)
+      if (teamAId !== null && teamBId !== null) {
+        const ids = [m.home_team_id, m.away_team_id]
+        if (!ids.includes(teamAId) || !ids.includes(teamBId)) return false
+      } else if (teamAId !== null) {
+        if (m.home_team_id !== teamAId && m.away_team_id !== teamAId) return false
+      } else if (teamBId !== null) {
+        if (m.home_team_id !== teamBId && m.away_team_id !== teamBId) return false
+      }
+
+      // Date filter
+      if (dateFilter) {
+        const matchDay = m.match_date.slice(0, 10)
+        if (matchDay !== dateFilter) return false
+      }
+
+      // Status filter (multi-select)
+      if (statusFilter.length > 0) {
+        const live = isMatchLive(m)
+        const effectiveStatus = live ? 'live' : m.status
+        if (!statusFilter.includes(effectiveStatus)) return false
+      }
+
+      return true
+    })
+  }, [matches, activeStage, teamAId, teamBId, dateFilter, statusFilter])
+
   if (loading) return <div className="text-center py-20 text-muted-foreground">{t('common.loading')}</div>
 
   return (
@@ -147,6 +198,57 @@ export function PredictionsPage() {
           </Link>
         )}
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-4 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <Label>{t('allPredictions.teamA')}</Label>
+            <TeamSelect
+              teams={teams}
+              value={teamAId !== null ? String(teamAId) : ''}
+              onValueChange={v => setTeamAId(v ? Number(v) : null)}
+              placeholder={t('common.all')}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>{t('allPredictions.teamB')}</Label>
+            <TeamSelect
+              teams={teams}
+              value={teamBId !== null ? String(teamBId) : ''}
+              onValueChange={v => setTeamBId(v ? Number(v) : null)}
+              placeholder={t('common.all')}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>{t('admin.matchDate')}</Label>
+            <Input
+              type="date"
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>{t('admin.status')}</Label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {ALL_STATUSES.map(s => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggleStatus(s)}
+                  className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${
+                    statusFilter.includes(s)
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-background text-muted-foreground border-border hover:border-primary'
+                  }`}
+                >
+                  {t(`matches.status.${s}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs value={activeStage} onValueChange={v => setActiveStage(v as TournamentStage)}>
         <TabsList className="flex flex-wrap h-auto gap-1">
