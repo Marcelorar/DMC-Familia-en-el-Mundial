@@ -1,4 +1,4 @@
-export type TournamentStage = 'GROUP' | 'ROUND_OF_32' | 'R16' | 'QF' | 'SF' | 'F'
+export type TournamentStage = 'GROUP' | 'R32' | 'R16' | 'QF' | 'SF' | 'F'
 
 export interface Team {
   id: number
