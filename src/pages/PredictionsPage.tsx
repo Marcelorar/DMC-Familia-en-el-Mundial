@@ -644,9 +644,9 @@ export function PredictionsPage() {
         onClick={handleSavePrediction}
         disabled={
           saving ||
-          (selectedMatch &&
-            isKnockoutStage(selectedMatch.stage) &&
-            !selectedWinner)
+    (selectedMatch !== null &&
+      isKnockoutStage(selectedMatch.stage) &&
+      !selectedWinner)
         }
       >
         {saving
