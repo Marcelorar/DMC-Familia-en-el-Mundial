@@ -16,6 +16,7 @@ import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { TeamSelect } from '@/components/ui/team-select'
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const STAGES: TournamentStage[] = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'F']
 
@@ -40,9 +41,12 @@ export function PredictionsPage() {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [homeScore, setHomeScore] = useState('')
   const [awayScore, setAwayScore] = useState('')
+  const [selectedWinner, setSelectedWinner] = useState('')
   const [saving, setSaving] = useState(false)
   const [predictionErrors, setPredictionErrors] = useState<{ home?: string; away?: string }>({})
 
+  const isKnockoutStage = (stage: TournamentStage) => stage !== "GROUP";
+  
   // Filters
   const [teamAId, setTeamAId] = useState<number | null>(null)
   const [teamBId, setTeamBId] = useState<number | null>(null)
@@ -88,51 +92,159 @@ export function PredictionsPage() {
   }
 
   function openDialog(match: Match) {
-    setSelectedMatch(match)
-    const existing = predictions[match.id]
-    setHomeScore(existing ? String(existing.predicted_home_score) : '')
-    setAwayScore(existing ? String(existing.predicted_away_score) : '')
-    setPredictionErrors({})
-    setDialogOpen(true)
+  setSelectedMatch(match);
+
+  const existing = predictions[match.id];
+
+  if (isKnockoutStage(match.stage)) {
+    if (existing) {
+      if (existing.predicted_home_score > existing.predicted_away_score) {
+        setSelectedWinner(String(match.home_team_id));
+      } else if (existing.predicted_away_score > existing.predicted_home_score) {
+        setSelectedWinner(String(match.away_team_id));
+      } else {
+        setSelectedWinner("");
+      }
+    } else {
+      setSelectedWinner("");
+    }
+  } else {
+    setHomeScore(existing ? String(existing.predicted_home_score) : "");
+    setAwayScore(existing ? String(existing.predicted_away_score) : "");
+    setPredictionErrors({});
+  }
+
+  setDialogOpen(true);
   }
 
   async function handleSavePrediction() {
-    if (!user || !selectedMatch) return
-    const hs = parseInt(homeScore)
-    const as_ = parseInt(awayScore)
-    const perrs: { home?: string; away?: string } = {}
-    if (homeScore === '') perrs.home = t('validation.required')
-    else if (isNaN(hs) || hs < 0) perrs.home = t('validation.invalidScore')
-    if (awayScore === '') perrs.away = t('validation.required')
-    else if (isNaN(as_) || as_ < 0) perrs.away = t('validation.invalidScore')
-    if (Object.keys(perrs).length > 0) {
-      setPredictionErrors(perrs)
-      return
-    }
-    setPredictionErrors({})
-    setSaving(true)
-    const existing = predictions[selectedMatch.id]
-    let error
+  if (!user || !selectedMatch) return;
+
+  // Knockout stages: winner only
+  if (isKnockoutStage(selectedMatch.stage)) {
+    if (!selectedWinner) return;
+
+    const predictedHomeScore =
+      Number(selectedWinner) === selectedMatch.home_team_id ? 999 : 0;
+
+    const predictedAwayScore =
+      Number(selectedWinner) === selectedMatch.away_team_id ? 999 : 0;
+
+    setSaving(true);
+
+    const existing = predictions[selectedMatch.id];
+
+    let error;
+
     if (existing) {
       const res = await supabase
         .from('predictions')
-        .update({ predicted_home_score: hs, predicted_away_score: as_, updated_at: new Date().toISOString() })
-        .eq('id', existing.id)
-      error = res.error
+        .update({
+          predicted_home_score: predictedHomeScore,
+          predicted_away_score: predictedAwayScore,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      error = res.error;
     } else {
       const res = await supabase
         .from('predictions')
-        .insert({ user_id: user.id, match_id: selectedMatch.id, predicted_home_score: hs, predicted_away_score: as_ })
-      error = res.error
+        .insert({
+          user_id: user.id,
+          match_id: selectedMatch.id,
+          predicted_home_score: predictedHomeScore,
+          predicted_away_score: predictedAwayScore,
+        });
+
+      error = res.error;
     }
+
     if (error) {
-      toast({ title: t('predictions.predictionError'), variant: 'destructive' })
+      toast({
+        title: t('predictions.predictionError'),
+        variant: 'destructive',
+      });
     } else {
-      toast({ title: t('predictions.predictionSaved'), variant: 'default' })
-      await fetchPredictions()
-      setDialogOpen(false)
+      toast({
+        title: t('predictions.predictionSaved'),
+        variant: 'default',
+      });
+
+      await fetchPredictions();
+      setDialogOpen(false);
     }
-    setSaving(false)
+
+    setSaving(false);
+    return;
+  }
+
+  // Group stage: score prediction
+  const hs = parseInt(homeScore);
+  const as_ = parseInt(awayScore);
+
+  const perrs: { home?: string; away?: string } = {};
+
+  if (homeScore === '') perrs.home = t('validation.required');
+  else if (isNaN(hs) || hs < 0)
+    perrs.home = t('validation.invalidScore');
+
+  if (awayScore === '') perrs.away = t('validation.required');
+  else if (isNaN(as_) || as_ < 0)
+    perrs.away = t('validation.invalidScore');
+
+  if (Object.keys(perrs).length > 0) {
+    setPredictionErrors(perrs);
+    return;
+  }
+
+  setPredictionErrors({});
+  setSaving(true);
+
+  const existing = predictions[selectedMatch.id];
+
+  let error;
+
+  if (existing) {
+    const res = await supabase
+      .from('predictions')
+      .update({
+        predicted_home_score: hs,
+        predicted_away_score: as_,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+
+    error = res.error;
+  } else {
+    const res = await supabase
+      .from('predictions')
+      .insert({
+        user_id: user.id,
+        match_id: selectedMatch.id,
+        predicted_home_score: hs,
+        predicted_away_score: as_,
+      });
+
+    error = res.error;
+  }
+
+  if (error) {
+    toast({
+      title: t('predictions.predictionError'),
+      variant: 'destructive',
+    });
+  } else {
+    toast({
+      title: t('predictions.predictionSaved'),
+      variant: 'default',
+    });
+
+    await fetchPredictions();
+    setDialogOpen(false);
+  }
+
+  setSaving(false);
   }
 
   const isMatchLive = (match: Match): boolean => {
@@ -322,22 +434,30 @@ export function PredictionsPage() {
                         {user ? (
                           <div className="border-t pt-2">
                             {prediction ? (
-                              <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-2">
-                                {t('predictions.yourPrediction')}:{' '}
-                                <span className="font-semibold text-foreground">
-                                  {prediction.predicted_home_score} – {prediction.predicted_away_score}
-                                </span>
-                                <span>
-                                {prediction && prediction.result !== 'proposed' && (
-                                    <Badge variant={resultBadgeVariant(prediction.result)} className="text-xs">
-                                      {t(`predictions.result.${prediction.result}`)}
-                                    </Badge>
-                                )}
-                                  </span>
-                              </p>
-                            ) : (
-                              <p className="text-xs text-center text-muted-foreground">{t('predictions.noPrediction')}</p>
-                            )}
+  <p className="text-xs text-center text-muted-foreground flex items-center justify-center gap-2">
+    {t('predictions.yourPrediction')}:{' '}
+    <span className="font-semibold text-foreground">
+      {match.stage === 'GROUP'
+        ? `${prediction.predicted_home_score} – ${prediction.predicted_away_score}`
+        : prediction.predicted_home_score > prediction.predicted_away_score
+          ? getTeamName(match.home_team!, i18n.language)
+          : getTeamName(match.away_team!, i18n.language)}
+    </span>
+
+    {prediction.result !== 'proposed' && (
+      <Badge
+        variant={resultBadgeVariant(prediction.result)}
+        className="text-xs"
+      >
+        {t(`predictions.result.${prediction.result}`)}
+      </Badge>
+    )}
+  </p>
+) : (
+  <p className="text-xs text-center text-muted-foreground">
+    {t('predictions.noPrediction')}
+  </p>
+)}
                             <Button
                               size="sm"
                               variant={prediction ? 'outline' : 'default'}
@@ -372,58 +492,170 @@ export function PredictionsPage() {
       </Tabs>
 
       {/* Prediction Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>
-              {predictions[selectedMatch?.id ?? '']
-                ? t('predictions.editPrediction')
-                : t('predictions.submitPrediction')}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedMatch && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between text-sm font-medium">
-                <span>{selectedMatch.home_team ? getTeamName(selectedMatch.home_team, i18n.language) : '?'}</span>
-                <span className="text-muted-foreground">{t('matches.vs')}</span>
-                <span>{selectedMatch.away_team ? getTeamName(selectedMatch.away_team, i18n.language) : '?'}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label>{t('predictions.homeScore')}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={homeScore}
-                    onChange={e => { setHomeScore(e.target.value); setPredictionErrors(prev => ({ ...prev, home: undefined })) }}
-                    placeholder="0"
-                    className={predictionErrors.home ? 'border-red-500' : ''}
-                  />
-                  {predictionErrors.home && <p className="text-xs text-red-500">{predictionErrors.home}</p>}
-                </div>
-                <div className="space-y-1">
-                  <Label>{t('predictions.awayScore')}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={awayScore}
-                    onChange={e => { setAwayScore(e.target.value); setPredictionErrors(prev => ({ ...prev, away: undefined })) }}
-                    placeholder="0"
-                    className={predictionErrors.away ? 'border-red-500' : ''}
-                  />
-                  {predictionErrors.away && <p className="text-xs text-red-500">{predictionErrors.away}</p>}
-                </div>
-              </div>
+<Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+  <DialogContent className="max-w-sm">
+    <DialogHeader>
+      <DialogTitle>
+        {predictions[selectedMatch?.id ?? ""]
+          ? t("predictions.editPrediction")
+          : t("predictions.submitPrediction")}
+      </DialogTitle>
+    </DialogHeader>
+
+    {selectedMatch && (
+      isKnockoutStage(selectedMatch.stage) ? (
+        <div className="space-y-6">
+          <div className="text-center text-sm font-medium">
+            {selectedMatch.home_team
+              ? getTeamName(selectedMatch.home_team, i18n.language)
+              : "?"}
+
+            <span className="mx-2 text-muted-foreground">
+              {t("matches.vs")}
+            </span>
+
+            {selectedMatch.away_team
+              ? getTeamName(selectedMatch.away_team, i18n.language)
+              : "?"}
+          </div>
+
+          <RadioGroup
+            value={selectedWinner}
+            onValueChange={setSelectedWinner}
+            className="space-y-3"
+          >
+            <div className="flex items-center space-x-3 rounded-lg border p-3">
+              <RadioGroupItem
+                id={`home-${selectedMatch.id}`}
+                value={String(selectedMatch.home_team_id)}
+              />
+
+              <Label
+                htmlFor={`home-${selectedMatch.id}`}
+                className="flex-1 cursor-pointer"
+              >
+                {selectedMatch.home_team
+                  ? getTeamName(selectedMatch.home_team, i18n.language)
+                  : "?"}
+              </Label>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
-            <Button onClick={handleSavePrediction} disabled={saving}>
-              {saving ? t('common.loading') : t('predictions.submitPrediction')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
+            <div className="flex items-center space-x-3 rounded-lg border p-3">
+              <RadioGroupItem
+                id={`away-${selectedMatch.id}`}
+                value={String(selectedMatch.away_team_id)}
+              />
+
+              <Label
+                htmlFor={`away-${selectedMatch.id}`}
+                className="flex-1 cursor-pointer"
+              >
+                {selectedMatch.away_team
+                  ? getTeamName(selectedMatch.away_team, i18n.language)
+                  : "?"}
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm font-medium">
+            <span>
+              {selectedMatch.home_team
+                ? getTeamName(selectedMatch.home_team, i18n.language)
+                : "?"}
+            </span>
+
+            <span className="text-muted-foreground">
+              {t("matches.vs")}
+            </span>
+
+            <span>
+              {selectedMatch.away_team
+                ? getTeamName(selectedMatch.away_team, i18n.language)
+                : "?"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>{t("predictions.homeScore")}</Label>
+
+              <Input
+                type="number"
+                min={0}
+                value={homeScore}
+                onChange={e => {
+                  setHomeScore(e.target.value)
+                  setPredictionErrors(prev => ({
+                    ...prev,
+                    home: undefined,
+                  }))
+                }}
+                placeholder="0"
+                className={predictionErrors.home ? "border-red-500" : ""}
+              />
+
+              {predictionErrors.home && (
+                <p className="text-xs text-red-500">
+                  {predictionErrors.home}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <Label>{t("predictions.awayScore")}</Label>
+
+              <Input
+                type="number"
+                min={0}
+                value={awayScore}
+                onChange={e => {
+                  setAwayScore(e.target.value)
+                  setPredictionErrors(prev => ({
+                    ...prev,
+                    away: undefined,
+                  }))
+                }}
+                placeholder="0"
+                className={predictionErrors.away ? "border-red-500" : ""}
+              />
+
+              {predictionErrors.away && (
+                <p className="text-xs text-red-500">
+                  {predictionErrors.away}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    )}
+
+    <DialogFooter>
+      <Button
+        variant="outline"
+        onClick={() => setDialogOpen(false)}
+      >
+        {t("common.cancel")}
+      </Button>
+
+      <Button
+        onClick={handleSavePrediction}
+        disabled={
+          saving ||
+          (selectedMatch &&
+            isKnockoutStage(selectedMatch.stage) &&
+            !selectedWinner)
+        }
+      >
+        {saving
+          ? t("common.loading")
+          : t("predictions.submitPrediction")}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
     </div>
   )
 }
