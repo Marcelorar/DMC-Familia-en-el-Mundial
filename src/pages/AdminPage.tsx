@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
-import { ThumbsUp, ThumbsDown, Plus, Edit, Flag } from 'lucide-react'
+import { ThumbsUp, ThumbsDown, Plus, Edit, Flag, ChevronDown, ChevronRight } from 'lucide-react'
 import { TeamSelect } from '@/components/ui/team-select'
 import { Link } from 'react-router-dom'
 import i18n from '@/i18n/index'
@@ -86,6 +86,8 @@ export function AdminPage() {
   const [saving, setSaving] = useState(false)
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof MatchFormData, string>>>({})
   const [finishErrors, setFinishErrors] = useState<{ home?: string; away?: string }>({})
+
+  const [expandedStages, setExpandedStages] = useState<TournamentStage[]>(['R32'])
 
   useEffect(() => {
     fetchAll()
@@ -317,6 +319,12 @@ export function AdminPage() {
 
   const setField = (field: keyof MatchFormData, value: string) => setForm(f => ({ ...f, [field]: value }))
 
+  const toggleStage = (stage: TournamentStage) => {
+    setExpandedStages(prev =>
+      prev.includes(stage) ? prev.filter(s => s !== stage) : [...prev, stage]
+    )
+  }
+
   function buildDiffRows(req: MatchChangeRequest) {
     const cur = req.match!
     const prop = req.proposed_data
@@ -427,49 +435,60 @@ export function AdminPage() {
           {STAGES.map(stage => {
             const stageMatches = matches.filter(m => m.stage === stage)
             if (stageMatches.length === 0) return null
+            const isExpanded = expandedStages.includes(stage)
             return (
-              <div key={stage}>
-                <h2 className="text-lg font-semibold mb-2">{t(`stages.${stage}`)}</h2>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {stageMatches.map(match => (
-                    <Card key={match.id}>
-                      <CardContent className="pt-4 pb-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant={isMatchLive(match) ? 'destructive' : match.status === 'completed' ? 'secondary' : 'outline'}>
-                            {isMatchLive(match) ? t('matches.status.live') : t(`matches.status.${match.status}`)}
-                          </Badge>
-                          <div className="flex gap-1">
-                            {canFinishMatch(match) && (
-                              <Button size="icon" variant="ghost" className="text-green-600 hover:text-green-700" onClick={() => openFinishDialog(match)} title={t('admin.finishMatch')}>
-                                <Flag className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button size="icon" variant="ghost" onClick={() => openEditDialog(match)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-1">
-                            {match.home_team?.flag_url && <img src={match.home_team.flag_url} alt={match.home_team.code} className="h-5 w-auto" />}
-                            <span className="font-medium">{match.home_team ? getTeamName(match.home_team, i18n.language) : '?'}</span>
-                          </div>
-                          <span className="text-muted-foreground px-2">
-                            {match.status !== 'scheduled' ? `${match.home_score ?? 0}–${match.away_score ?? 0}` : 'vs'}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">{match.away_team ? getTeamName(match.away_team, i18n.language) : '?'}</span>
-                            {match.away_team?.flag_url && <img src={match.away_team.flag_url} alt={match.away_team.code} className="h-5 w-auto" />}
-                          </div>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(match.match_date), 'PPp')}
-                        </p>
-                        {match.venue && <p className="text-xs text-muted-foreground truncate">{match.venue}</p>}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+              <div key={stage} className="border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => toggleStage(stage)}
+                  className="w-full flex items-center justify-between p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <h2 className="text-lg font-semibold">{t(`stages.${stage}`)}</h2>
+                  {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                </button>
+                {isExpanded && (
+                  <div className="p-4 pt-0">
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 mt-3">
+                      {stageMatches.map(match => (
+                        <Card key={match.id}>
+                          <CardContent className="pt-4 pb-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge variant={isMatchLive(match) ? 'destructive' : match.status === 'completed' ? 'secondary' : 'outline'}>
+                                {isMatchLive(match) ? t('matches.status.live') : t(`matches.status.${match.status}`)}
+                              </Badge>
+                              <div className="flex gap-1">
+                                {canFinishMatch(match) && (
+                                  <Button size="icon" variant="ghost" className="text-green-600 hover:text-green-700" onClick={() => openFinishDialog(match)} title={t('admin.finishMatch')}>
+                                    <Flag className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button size="icon" variant="ghost" onClick={() => openEditDialog(match)}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-1">
+                                {match.home_team?.flag_url && <img src={match.home_team.flag_url} alt={match.home_team.code} className="h-5 w-auto" />}
+                                <span className="font-medium">{match.home_team ? getTeamName(match.home_team, i18n.language) : '?'}</span>
+                              </div>
+                              <span className="text-muted-foreground px-2">
+                                {match.status !== 'scheduled' ? `${match.home_score ?? 0}–${match.away_score ?? 0}` : 'vs'}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-medium">{match.away_team ? getTeamName(match.away_team, i18n.language) : '?'}</span>
+                                {match.away_team?.flag_url && <img src={match.away_team.flag_url} alt={match.away_team.code} className="h-5 w-auto" />}
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {format(new Date(match.match_date), 'PPp')}
+                            </p>
+                            {match.venue && <p className="text-xs text-muted-foreground truncate">{match.venue}</p>}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}
