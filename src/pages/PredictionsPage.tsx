@@ -16,7 +16,7 @@ import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { TeamSelect } from '@/components/ui/team-select'
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
 const STAGES: TournamentStage[] = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'F']
 
@@ -45,7 +45,7 @@ export function PredictionsPage() {
   const [saving, setSaving] = useState(false)
   const [predictionErrors, setPredictionErrors] = useState<{ home?: string; away?: string }>({})
 
-  const isKnockoutStage = (stage: TournamentStage) => stage !== "GROUP";
+  const isKnockoutStage = (stage: TournamentStage) => stage !== 'GROUP'
   
   // Filters
   const [teamAId, setTeamAId] = useState<number | null>(null)
@@ -92,159 +92,160 @@ export function PredictionsPage() {
   }
 
   function openDialog(match: Match) {
-  setSelectedMatch(match);
+    setSelectedMatch(match)
+    setPredictionErrors({})
 
-  const existing = predictions[match.id];
+    const existing = predictions[match.id]
 
-  if (isKnockoutStage(match.stage)) {
-    if (existing) {
-      if (existing.predicted_home_score > existing.predicted_away_score) {
-        setSelectedWinner(String(match.home_team_id));
-      } else if (existing.predicted_away_score > existing.predicted_home_score) {
-        setSelectedWinner(String(match.away_team_id));
+    if (isKnockoutStage(match.stage)) {
+      setHomeScore('')
+      setAwayScore('')
+      if (existing) {
+        if (existing.predicted_home_score > existing.predicted_away_score) {
+          setSelectedWinner(String(match.home_team_id))
+        } else if (existing.predicted_away_score > existing.predicted_home_score) {
+          setSelectedWinner(String(match.away_team_id))
+        } else {
+          setSelectedWinner('')
+        }
       } else {
-        setSelectedWinner("");
+        setSelectedWinner('')
       }
     } else {
-      setSelectedWinner("");
+      setSelectedWinner('')
+      setHomeScore(existing ? String(existing.predicted_home_score) : '')
+      setAwayScore(existing ? String(existing.predicted_away_score) : '')
     }
-  } else {
-    setHomeScore(existing ? String(existing.predicted_home_score) : "");
-    setAwayScore(existing ? String(existing.predicted_away_score) : "");
-    setPredictionErrors({});
-  }
 
-  setDialogOpen(true);
+    setDialogOpen(true)
   }
 
   async function handleSavePrediction() {
-  if (!user || !selectedMatch) return;
+    if (!user || !selectedMatch) return
 
-  // Knockout stages: winner only
-  if (isKnockoutStage(selectedMatch.stage)) {
-    if (!selectedWinner) return;
+    // Knockout stages: winner only
+    if (isKnockoutStage(selectedMatch.stage)) {
+      if (!selectedWinner) return
 
-    const predictedHomeScore =
-      Number(selectedWinner) === selectedMatch.home_team_id ? 999 : 0;
+      const predictedHomeScore =
+        Number(selectedWinner) === selectedMatch.home_team_id ? 999 : 0
 
-    const predictedAwayScore =
-      Number(selectedWinner) === selectedMatch.away_team_id ? 999 : 0;
+      const predictedAwayScore =
+        Number(selectedWinner) === selectedMatch.away_team_id ? 999 : 0
 
-    setSaving(true);
+      setSaving(true)
 
-    const existing = predictions[selectedMatch.id];
+      const existing = predictions[selectedMatch.id]
 
-    let error;
+      let error
+
+      if (existing) {
+        const res = await supabase
+          .from('predictions')
+          .update({
+            predicted_home_score: predictedHomeScore,
+            predicted_away_score: predictedAwayScore,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+
+        error = res.error
+      } else {
+        const res = await supabase
+          .from('predictions')
+          .insert({
+            user_id: user.id,
+            match_id: selectedMatch.id,
+            predicted_home_score: predictedHomeScore,
+            predicted_away_score: predictedAwayScore,
+          })
+
+        error = res.error
+      }
+
+      if (error) {
+        toast({
+          title: t('predictions.predictionError'),
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: t('predictions.predictionSaved'),
+          variant: 'default',
+        })
+
+        await fetchPredictions()
+        setDialogOpen(false)
+      }
+
+      setSaving(false)
+      return
+    }
+
+    // Group stage: score prediction
+    const hs = parseInt(homeScore)
+    const as_ = parseInt(awayScore)
+
+    const perrs: { home?: string; away?: string } = {}
+
+    if (homeScore === '') perrs.home = t('validation.required')
+    else if (isNaN(hs) || hs < 0) perrs.home = t('validation.invalidScore')
+
+    if (awayScore === '') perrs.away = t('validation.required')
+    else if (isNaN(as_) || as_ < 0) perrs.away = t('validation.invalidScore')
+
+    if (Object.keys(perrs).length > 0) {
+      setPredictionErrors(perrs)
+      return
+    }
+
+    setPredictionErrors({})
+    setSaving(true)
+
+    const existing = predictions[selectedMatch.id]
+
+    let error
 
     if (existing) {
       const res = await supabase
         .from('predictions')
         .update({
-          predicted_home_score: predictedHomeScore,
-          predicted_away_score: predictedAwayScore,
+          predicted_home_score: hs,
+          predicted_away_score: as_,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', existing.id);
+        .eq('id', existing.id)
 
-      error = res.error;
+      error = res.error
     } else {
       const res = await supabase
         .from('predictions')
         .insert({
           user_id: user.id,
           match_id: selectedMatch.id,
-          predicted_home_score: predictedHomeScore,
-          predicted_away_score: predictedAwayScore,
-        });
+          predicted_home_score: hs,
+          predicted_away_score: as_,
+        })
 
-      error = res.error;
+      error = res.error
     }
 
     if (error) {
       toast({
         title: t('predictions.predictionError'),
         variant: 'destructive',
-      });
+      })
     } else {
       toast({
         title: t('predictions.predictionSaved'),
         variant: 'default',
-      });
+      })
 
-      await fetchPredictions();
-      setDialogOpen(false);
+      await fetchPredictions()
+      setDialogOpen(false)
     }
 
-    setSaving(false);
-    return;
-  }
-
-  // Group stage: score prediction
-  const hs = parseInt(homeScore);
-  const as_ = parseInt(awayScore);
-
-  const perrs: { home?: string; away?: string } = {};
-
-  if (homeScore === '') perrs.home = t('validation.required');
-  else if (isNaN(hs) || hs < 0)
-    perrs.home = t('validation.invalidScore');
-
-  if (awayScore === '') perrs.away = t('validation.required');
-  else if (isNaN(as_) || as_ < 0)
-    perrs.away = t('validation.invalidScore');
-
-  if (Object.keys(perrs).length > 0) {
-    setPredictionErrors(perrs);
-    return;
-  }
-
-  setPredictionErrors({});
-  setSaving(true);
-
-  const existing = predictions[selectedMatch.id];
-
-  let error;
-
-  if (existing) {
-    const res = await supabase
-      .from('predictions')
-      .update({
-        predicted_home_score: hs,
-        predicted_away_score: as_,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', existing.id);
-
-    error = res.error;
-  } else {
-    const res = await supabase
-      .from('predictions')
-      .insert({
-        user_id: user.id,
-        match_id: selectedMatch.id,
-        predicted_home_score: hs,
-        predicted_away_score: as_,
-      });
-
-    error = res.error;
-  }
-
-  if (error) {
-    toast({
-      title: t('predictions.predictionError'),
-      variant: 'destructive',
-    });
-  } else {
-    toast({
-      title: t('predictions.predictionSaved'),
-      variant: 'default',
-    });
-
-    await fetchPredictions();
-    setDialogOpen(false);
-  }
-
-  setSaving(false);
+    setSaving(false)
   }
 
   const isMatchLive = (match: Match): boolean => {
