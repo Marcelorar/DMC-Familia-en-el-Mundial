@@ -54,7 +54,7 @@ function toLocalDatetimeInput(utcIso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-// Returns true if the "Finish" button should be shown: match_date + 80 minutes has passed
+// Returns true if the "Finish" button should be shown: match_date + 80 minutes has passed (almost end of match)
 function canFinishMatch(match: Match): boolean {
   if (match.status === 'completed') return false
   const finishTime = new Date(match.match_date).getTime() + 80 * 60 * 1000
