@@ -24,6 +24,8 @@ interface PredictionRow {
 
 const STAGES: TournamentStage[] = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'F']
 
+const isKnockoutStage = (stage: string) => stage !== 'GROUP'
+
 function isMatchLive(match: Match): boolean {
   const now = Date.now()
   const start = new Date(match.match_date).getTime()
@@ -250,7 +252,13 @@ export function AllPredictionsPage() {
 
                     <div className="ml-auto flex items-center gap-2 flex-wrap">
                       {(match.status === 'completed' || live) && match.home_score != null && (
-                        <span className="text-sm font-mono font-bold">{match.home_score} – {match.away_score}</span>
+                        isKnockoutStage(match.stage) ? (
+                          <span className="text-sm font-bold text-primary">
+                            {match.home_score === 999 ? (home ? getTeamName(home, i18n.language) : '?') : (away ? getTeamName(away, i18n.language) : '?')}
+                          </span>
+                        ) : (
+                          <span className="text-sm font-mono font-bold">{match.home_score} – {match.away_score}</span>
+                        )
                       )}
                       <Badge variant={statusVariant as any}>{statusLabel}</Badge>
                       <Badge variant="outline">{t(`stages.${match.stage}`)}</Badge>
@@ -274,8 +282,14 @@ export function AllPredictionsPage() {
                             <td className="py-2 pr-4">
                               <span className="font-medium">{p.user?.display_name ?? p.user?.email ?? p.user_id}</span>
                             </td>
-                            <td className="py-2 px-4 text-center font-mono font-semibold">
-                              {p.predicted_home_score} – {p.predicted_away_score}
+                            <td className="py-2 px-4 text-center">
+                              {isKnockoutStage(match.stage) ? (
+                                <span className="text-xs font-bold text-primary">
+                                  {p.predicted_home_score === 999 ? (home ? getTeamName(home, i18n.language) : '?') : (away ? getTeamName(away, i18n.language) : '?')}
+                                </span>
+                              ) : (
+                                <span className="font-mono font-semibold">{p.predicted_home_score} – {p.predicted_away_score}</span>
+                              )}
                             </td>
                             <td className="py-2 pl-4 text-center">
                               {p.result ? (

@@ -11,6 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { ThumbsUp, ThumbsDown, Plus, Edit, Flag } from 'lucide-react'
@@ -20,6 +22,8 @@ import i18n from '@/i18n/index'
 import { getTeamName } from '@/lib/teamUtils'
 
 const STAGES: TournamentStage[] = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'F']
+
+const isKnockoutStage = (stage: string) => stage !== 'GROUP' && stage !== ''
 
 interface MatchFormData {
   home_team_id: string
@@ -314,48 +318,73 @@ export function AdminPage() {
 
   const setField = (field: keyof MatchFormData, value: string) => setForm(f => ({ ...f, [field]: value }))
 
-  function buildDiffRows(req: MatchChangeRequest, homeTeam: Team | undefined, awayTeam: Team | undefined) {
+  function buildDiffRows(req: MatchChangeRequest) {
     const cur = req.match!
     const prop = req.proposed_data
     const curHome = teams.find(t => t.id === cur.home_team_id)
     const curAway = teams.find(t => t.id === cur.away_team_id)
+    
+    // For "after" values, we use the proposed value if it exists, otherwise the current value
+    const propHomeId = prop.home_team_id ?? cur.home_team_id
+    const propAwayId = prop.away_team_id ?? cur.away_team_id
+    const propHome = teams.find(t => t.id === propHomeId)
+    const propAway = teams.find(t => t.id === propAwayId)
+    const propStage = prop.stage ?? cur.stage
+    
     const rows: { label: string; before: string; after: string; changed: boolean }[] = []
 
     const stageB = cur.stage ? t(`stages.${cur.stage}`) : '—'
-    const stageA = prop.stage ? t(`stages.${prop.stage}`) : '—'
-    rows.push({ label: t('admin.stage'), before: stageB, after: stageA, changed: stageB !== stageA })
+    const stageA = propStage ? t(`stages.${propStage}`) : '—'
+    rows.push({ label: t('admin.stage'), before: stageB, after: stageA, changed: 'stage' in prop && stageB !== stageA })
 
     const homeB = curHome ? getTeamName(curHome, i18n.language) : String(cur.home_team_id)
-    const homeA = homeTeam ? getTeamName(homeTeam, i18n.language) : String(prop.home_team_id)
+    const homeA = propHome ? getTeamName(propHome, i18n.language) : (propHomeId ? String(propHomeId) : '—')
     const homeLabel = `${t('admin.homeTeam')} (${homeB})`
-    rows.push({ label: homeLabel, before: homeB, after: homeA, changed: homeB !== homeA })
+    rows.push({ label: homeLabel, before: homeB, after: homeA, changed: 'home_team_id' in prop && homeB !== homeA })
 
     const awayB = curAway ? getTeamName(curAway, i18n.language) : String(cur.away_team_id)
-    const awayA = awayTeam ? getTeamName(awayTeam, i18n.language) : String(prop.away_team_id)
+    const awayA = propAway ? getTeamName(propAway, i18n.language) : (propAwayId ? String(propAwayId) : '—')
     const awayLabel = `${t('admin.awayTeam')} (${awayB})`
-    rows.push({ label: awayLabel, before: awayB, after: awayA, changed: awayB !== awayA })
+    rows.push({ label: awayLabel, before: awayB, after: awayA, changed: 'away_team_id' in prop && awayB !== awayA })
 
     const dateB = cur.match_date ? format(new Date(cur.match_date), 'PPp') : '—'
-    const dateA = prop.match_date ? format(new Date(prop.match_date), 'PPp') : '—'
-    rows.push({ label: t('admin.matchDate'), before: dateB, after: dateA, changed: dateB !== dateA })
+    const dateA = prop.match_date ? format(new Date(prop.match_date), 'PPp') : dateB
+    rows.push({ label: t('admin.matchDate'), before: dateB, after: dateA, changed: 'match_date' in prop && dateB !== dateA })
 
     const venueB = cur.venue ?? '—'
-    const venueA = prop.venue ?? '—'
-    rows.push({ label: t('admin.venue'), before: venueB, after: venueA, changed: venueB !== venueA })
+    const venueA = prop.venue ?? venueB
+    rows.push({ label: t('admin.venue'), before: venueB, after: venueA, changed: 'venue' in prop && venueB !== venueA })
 
     const statusB = cur.status ? t(`matches.status.${cur.status}`) : '—'
-    const statusA = prop.status ? t(`matches.status.${prop.status}`) : '—'
-    rows.push({ label: t('admin.status'), before: statusB, after: statusA, changed: statusB !== statusA })
+    const statusA = prop.status ? t(`matches.status.${prop.status}`) : statusB
+    rows.push({ label: t('admin.status'), before: statusB, after: statusA, changed: 'status' in prop && statusB !== statusA })
 
     const homeScoreB = cur.home_score != null ? String(cur.home_score) : '—'
-    const homeScoreA = prop.home_score != null ? String(prop.home_score) : '—'
-    const homeScoreLabel = curHome ? `${t('admin.homeScore')} (${getTeamName(curHome, i18n.language)})` : t('admin.homeScore')
-    rows.push({ label: homeScoreLabel, before: homeScoreB, after: homeScoreA, changed: homeScoreB !== homeScoreA })
+    const homeScoreA = prop.home_score != null ? String(prop.home_score) : homeScoreB
 
     const awayScoreB = cur.away_score != null ? String(cur.away_score) : '—'
-    const awayScoreA = prop.away_score != null ? String(prop.away_score) : '—'
-    const awayScoreLabel = curAway ? `${t('admin.awayScore')} (${getTeamName(curAway, i18n.language)})` : t('admin.awayScore')
-    rows.push({ label: awayScoreLabel, before: awayScoreB, after: awayScoreA, changed: awayScoreB !== awayScoreA })
+    const awayScoreA = prop.away_score != null ? String(prop.away_score) : awayScoreB
+    
+    // For knockout stages, display "Winner" instead of raw 999 score
+    if (isKnockoutStage(propStage || '')) {
+      const winnerB = cur.home_score === 999 ? homeB : cur.away_score === 999 ? awayB : '—'
+      const propHomeScore = prop.home_score ?? cur.home_score
+      const propAwayScore = prop.away_score ?? cur.away_score
+      const winnerA = propHomeScore === 999 ? homeA : propAwayScore === 999 ? awayA : '—'
+      
+      rows.push({ 
+        label: t('admin.winner'), 
+        before: winnerB, 
+        after: winnerA, 
+        changed: (('home_score' in prop) || ('away_score' in prop)) && winnerB !== winnerA 
+      })
+    } else {
+      const homeScoreLabel = curHome ? `${t('admin.homeScore')} (${getTeamName(curHome, i18n.language)})` : t('admin.homeScore')
+      rows.push({ label: homeScoreLabel, before: homeScoreB, after: homeScoreA, changed: 'home_score' in prop && homeScoreB !== homeScoreA })
+
+      const awayScoreLabel = curAway ? `${t('admin.awayScore')} (${getTeamName(curAway, i18n.language)})` : t('admin.awayScore')
+      rows.push({ label: awayScoreLabel, before: awayScoreB, after: awayScoreA, changed: 'away_score' in prop && awayScoreB !== awayScoreA })
+    }
 
     return rows
   }
@@ -500,7 +529,7 @@ export function AdminPage() {
                           <span className="text-red-600">{t('admin.before')}</span>
                           <span className="text-green-600">{t('admin.after')}</span>
                         </div>
-                        {buildDiffRows(req, homeTeam, awayTeam).map((row, i) => (
+                        {buildDiffRows(req).map((row, i) => (
                           <div key={i} className={`grid grid-cols-3 border-t px-3 py-2 ${row.changed ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}>
                             <span className="text-muted-foreground text-xs">{row.label}</span>
                             <span className={`text-xs ${row.changed ? 'line-through text-red-500' : 'text-foreground'}`}>{row.before}</span>
@@ -646,18 +675,62 @@ export function AdminPage() {
 
             {/* Scores (only for completed) */}
             {form.status === 'completed' && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>{t('admin.homeScore')}</Label>
-                  <Input type="number" min={0} value={form.home_score} onChange={e => { setField('home_score', e.target.value); setFormErrors(er => ({ ...er, home_score: undefined })) }} placeholder="0" className={formErrors.home_score ? 'border-red-500' : ''} />
-                  {formErrors.home_score && <p className="text-xs text-red-500">{formErrors.home_score}</p>}
+              isKnockoutStage(form.stage) ? (
+                <div className="space-y-3">
+                  <Label>{t('admin.winner')}</Label>
+                  <RadioGroup
+                    value={form.home_score === '999' ? 'home' : form.away_score === '999' ? 'away' : ''}
+                    onValueChange={v => {
+                      setForm(f => ({
+                        ...f,
+                        home_score: v === 'home' ? '999' : '0',
+                        away_score: v === 'away' ? '999' : '0'
+                      }))
+                      setFormErrors(e => ({ ...e, home_score: undefined, away_score: undefined }))
+                    }}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    <div>
+                      <RadioGroupItem value="home" id="form-home" className="peer sr-only" />
+                      <Label
+                        htmlFor="form-home"
+                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                      >
+                        <span className="text-sm font-semibold truncate w-full text-center">
+                          {form.home_team_id ? getTeamName(teams.find(t => String(t.id) === form.home_team_id), i18n.language) : t('admin.homeTeam')}
+                        </span>
+                      </Label>
+                    </div>
+                    <div>
+                      <RadioGroupItem value="away" id="form-away" className="peer sr-only" />
+                      <Label
+                        htmlFor="form-away"
+                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                      >
+                        <span className="text-sm font-semibold truncate w-full text-center">
+                          {form.away_team_id ? getTeamName(teams.find(t => String(t.id) === form.away_team_id), i18n.language) : t('admin.awayTeam')}
+                        </span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  {(formErrors.home_score || formErrors.away_score) && (
+                    <p className="text-xs text-red-500">{t('validation.required')}</p>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label>{t('admin.awayScore')}</Label>
-                  <Input type="number" min={0} value={form.away_score} onChange={e => { setField('away_score', e.target.value); setFormErrors(er => ({ ...er, away_score: undefined })) }} placeholder="0" className={formErrors.away_score ? 'border-red-500' : ''} />
-                  {formErrors.away_score && <p className="text-xs text-red-500">{formErrors.away_score}</p>}
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>{t('admin.homeScore')}</Label>
+                    <Input type="number" min={0} value={form.home_score} onChange={e => { setField('home_score', e.target.value); setFormErrors(er => ({ ...er, home_score: undefined })) }} placeholder="0" className={formErrors.home_score ? 'border-red-500' : ''} />
+                    {formErrors.home_score && <p className="text-xs text-red-500">{formErrors.home_score}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('admin.awayScore')}</Label>
+                    <Input type="number" min={0} value={form.away_score} onChange={e => { setField('away_score', e.target.value); setFormErrors(er => ({ ...er, away_score: undefined })) }} placeholder="0" className={formErrors.away_score ? 'border-red-500' : ''} />
+                    {formErrors.away_score && <p className="text-xs text-red-500">{formErrors.away_score}</p>}
+                  </div>
                 </div>
-              </div>
+              )
             )}
           </div>
           <DialogFooter>
@@ -682,30 +755,74 @@ export function AdminPage() {
                 {' vs '}
                 {finishingMatch.away_team ? getTeamName(finishingMatch.away_team, i18n.language) : '?'}
               </p>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label>{t('admin.homeScore')}</Label>
-                  <Input
-                    type="number" min={0}
-                    value={finishScores.home}
-                    onChange={e => { setFinishScores(s => ({ ...s, home: e.target.value })); setFinishErrors(er => ({ ...er, home: undefined })) }}
-                    placeholder="0"
-                    className={finishErrors.home ? 'border-red-500' : ''}
-                  />
-                  {finishErrors.home && <p className="text-xs text-red-500">{finishErrors.home}</p>}
+              
+              {isKnockoutStage(finishingMatch.stage) ? (
+                <div className="space-y-3">
+                  <Label>{t('admin.winner')}</Label>
+                  <RadioGroup
+                    value={finishScores.home === '999' ? 'home' : finishScores.away === '999' ? 'away' : ''}
+                    onValueChange={v => {
+                      setFinishScores({
+                        home: v === 'home' ? '999' : '0',
+                        away: v === 'away' ? '999' : '0'
+                      })
+                      setFinishErrors({})
+                    }}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    <div>
+                      <RadioGroupItem value="home" id="finish-home" className="peer sr-only" />
+                      <Label
+                        htmlFor="finish-home"
+                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                      >
+                        <span className="text-sm font-semibold truncate w-full text-center">
+                          {finishingMatch.home_team ? getTeamName(finishingMatch.home_team, i18n.language) : t('admin.homeTeam')}
+                        </span>
+                      </Label>
+                    </div>
+                    <div>
+                      <RadioGroupItem value="away" id="finish-away" className="peer sr-only" />
+                      <Label
+                        htmlFor="finish-away"
+                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                      >
+                        <span className="text-sm font-semibold truncate w-full text-center">
+                          {finishingMatch.away_team ? getTeamName(finishingMatch.away_team, i18n.language) : t('admin.awayTeam')}
+                        </span>
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                  {(finishErrors.home || finishErrors.away) && (
+                    <p className="text-xs text-red-500">{t('validation.required')}</p>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <Label>{t('admin.awayScore')}</Label>
-                  <Input
-                    type="number" min={0}
-                    value={finishScores.away}
-                    onChange={e => { setFinishScores(s => ({ ...s, away: e.target.value })); setFinishErrors(er => ({ ...er, away: undefined })) }}
-                    placeholder="0"
-                    className={finishErrors.away ? 'border-red-500' : ''}
-                  />
-                  {finishErrors.away && <p className="text-xs text-red-500">{finishErrors.away}</p>}
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>{t('admin.homeScore')}</Label>
+                    <Input
+                      type="number" min={0}
+                      value={finishScores.home}
+                      onChange={e => { setFinishScores(s => ({ ...s, home: e.target.value })); setFinishErrors(er => ({ ...er, home: undefined })) }}
+                      placeholder="0"
+                      className={finishErrors.home ? 'border-red-500' : ''}
+                    />
+                    {finishErrors.home && <p className="text-xs text-red-500">{finishErrors.home}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <Label>{t('admin.awayScore')}</Label>
+                    <Input
+                      type="number" min={0}
+                      value={finishScores.away}
+                      onChange={e => { setFinishScores(s => ({ ...s, away: e.target.value })); setFinishErrors(er => ({ ...er, away: undefined })) }}
+                      placeholder="0"
+                      className={finishErrors.away ? 'border-red-500' : ''}
+                    />
+                    {finishErrors.away && <p className="text-xs text-red-500">{finishErrors.away}</p>}
+                  </div>
                 </div>
-              </div>
+              )}
               <p className="text-xs text-muted-foreground">{t('admin.finishMatchHint')}</p>
             </div>
           )}

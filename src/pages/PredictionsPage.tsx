@@ -416,7 +416,15 @@ export function PredictionsPage() {
                           <div className="text-center px-2">
                             {match.status === 'completed' || isMatchLive(match) ? (
                               <span className="text-xl font-bold">
-                                {match.home_score ?? 0} – {match.away_score ?? 0}
+                                {isKnockoutStage(match.stage) && match.home_score != null ? (
+                                  match.home_score > match.away_score ? (
+                                    <span className="text-sm text-primary">{getTeamName(match.home_team!, i18n.language)}</span>
+                                  ) : (
+                                    <span className="text-sm text-primary">{getTeamName(match.away_team!, i18n.language)}</span>
+                                  )
+                                ) : (
+                                  `${match.home_score ?? 0} – ${match.away_score ?? 0}`
+                                )}
                               </span>
                             ) : (
                               <span className="text-muted-foreground font-medium">{t('matches.vs')}</span>
