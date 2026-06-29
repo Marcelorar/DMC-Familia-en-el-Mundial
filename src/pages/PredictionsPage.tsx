@@ -17,6 +17,7 @@ import { format } from 'date-fns'
 import { Link } from 'react-router-dom'
 import { TeamSelect } from '@/components/ui/team-select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { cn } from '@/lib/utils'
 
 const STAGES: TournamentStage[] = ['GROUP', 'R32', 'R16', 'QF', 'SF', 'F']
 
@@ -506,57 +507,75 @@ export function PredictionsPage() {
     {selectedMatch && (
       isKnockoutStage(selectedMatch.stage) ? (
         <div className="space-y-6">
-          <div className="text-center text-sm font-medium">
-            {selectedMatch.home_team
-              ? getTeamName(selectedMatch.home_team, i18n.language)
-              : "?"}
+          <div className="relative">
+            <RadioGroup
+              value={selectedWinner}
+              onValueChange={setSelectedWinner}
+              className="grid grid-cols-2 gap-0 overflow-hidden rounded-xl border shadow-sm"
+            >
+              {[
+                { team: selectedMatch.home_team, id: selectedMatch.home_team_id, label: 'home' },
+                { team: selectedMatch.away_team, id: selectedMatch.away_team_id, label: 'away' }
+              ].map(({ team, id, label }) => {
+                const isSelected = selectedWinner === String(id);
+                return (
+                  <Label
+                    key={label}
+                    htmlFor={`${label}-${selectedMatch.id}`}
+                    className={cn(
+                      "relative flex flex-col items-center justify-between gap-4 p-6 transition-all cursor-pointer h-full min-h-[180px]",
+                      label === 'home' ? "bg-blue-500/5" : "bg-red-500/5",
+                      isSelected
+                        ? "opacity-100 bg-accent/20 z-10"
+                        : "opacity-40 grayscale hover:opacity-60"
+                    )}
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      {team?.flag_url ? (
+                        <img
+                          src={team.flag_url}
+                          alt={team.code}
+                          className={cn(
+                            "h-16 w-auto object-contain transition-transform duration-300",
+                            isSelected && "scale-110 drop-shadow-md"
+                          )}
+                        />
+                      ) : (
+                        <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center text-2xl font-bold">
+                          ?
+                        </div>
+                      )}
+                      <span className={cn(
+                        "font-bold text-sm text-center line-clamp-2",
+                        isSelected ? "text-foreground" : "text-muted-foreground"
+                      )}>
+                        {team ? getTeamName(team, i18n.language) : "?"}
+                      </span>
+                    </div>
+                    
+                    <RadioGroupItem
+                      id={`${label}-${selectedMatch.id}`}
+                      value={String(id)}
+                      className={cn(
+                        "transition-all duration-300",
+                        isSelected ? "scale-125 border-primary" : "border-muted-foreground"
+                      )}
+                    />
 
-            <span className="mx-2 text-muted-foreground">
-              {t("matches.vs")}
-            </span>
-
-            {selectedMatch.away_team
-              ? getTeamName(selectedMatch.away_team, i18n.language)
-              : "?"}
+                    {isSelected && (
+                      <div className="absolute inset-0 border-2 border-primary pointer-events-none" />
+                    )}
+                  </Label>
+                );
+              })}
+            </RadioGroup>
+            
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
+              <div className="bg-background border rounded-full w-8 h-8 flex items-center justify-center text-[10px] font-bold shadow-sm">
+                VS
+              </div>
+            </div>
           </div>
-
-          <RadioGroup
-            value={selectedWinner}
-            onValueChange={setSelectedWinner}
-            className="space-y-3"
-          >
-            <div className="flex items-center space-x-3 rounded-lg border p-3">
-              <RadioGroupItem
-                id={`home-${selectedMatch.id}`}
-                value={String(selectedMatch.home_team_id)}
-              />
-
-              <Label
-                htmlFor={`home-${selectedMatch.id}`}
-                className="flex-1 cursor-pointer"
-              >
-                {selectedMatch.home_team
-                  ? getTeamName(selectedMatch.home_team, i18n.language)
-                  : "?"}
-              </Label>
-            </div>
-
-            <div className="flex items-center space-x-3 rounded-lg border p-3">
-              <RadioGroupItem
-                id={`away-${selectedMatch.id}`}
-                value={String(selectedMatch.away_team_id)}
-              />
-
-              <Label
-                htmlFor={`away-${selectedMatch.id}`}
-                className="flex-1 cursor-pointer"
-              >
-                {selectedMatch.away_team
-                  ? getTeamName(selectedMatch.away_team, i18n.language)
-                  : "?"}
-              </Label>
-            </div>
-          </RadioGroup>
         </div>
       ) : (
         <div className="space-y-4">
