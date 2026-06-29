@@ -92,9 +92,9 @@
     "correct": "Correct",
     "noData": "No leaderboard data yet.",
     "scoringTitle": "Scoring",
-    "scoringExact": "Exact score → 3 points",
-    "scoringResult": "Correct result (win/draw/loss) → 1 point",
-    "scoringWrong": "Wrong result → 0 points"
+    "scoringExact": "Exact score (Groups: 3 pts | R32+: 5 pts)",
+    "scoringResult": "Correct result (Groups: 1 pt)",
+    "scoringWrong": "Wrong result (Groups: 0 pts | R32+: 1 pt)"
   },
   "admin": {
     "title": "Match Administration",

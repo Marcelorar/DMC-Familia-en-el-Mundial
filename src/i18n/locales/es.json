@@ -92,9 +92,9 @@
     "correct": "Correctas",
     "noData": "Aún no hay datos de clasificación.",
     "scoringTitle": "Puntuación",
-    "scoringExact": "Marcador exacto → 3 puntos",
-    "scoringResult": "Resultado correcto (victoria/empate/derrota) → 1 punto",
-    "scoringWrong": "Resultado incorrecto → 0 puntos"
+    "scoringExact": "Marcador exacto (Grupos: 3 pts | R32+: 5 pts)",
+    "scoringResult": "Resultado correcto (Grupos: 1 pt)",
+    "scoringWrong": "Resultado incorrecto (Grupos: 0 pts | R32+: 1 pt)"
   },
   "admin": {
     "title": "Administración de Partidos",

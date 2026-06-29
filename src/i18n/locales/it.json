@@ -92,9 +92,9 @@
     "correct": "Corretti",
     "noData": "Nessun dato in classifica ancora.",
     "scoringTitle": "Punteggio",
-    "scoringExact": "Risultato esatto → 3 punti",
-    "scoringResult": "Risultato corretto (vittoria/pareggio/sconfitta) → 1 punto",
-    "scoringWrong": "Risultato sbagliato → 0 punti"
+    "scoringExact": "Risultato esatto (Gironi: 3 pti | R32+: 5 pti)",
+    "scoringResult": "Risultato corretto (Gironi: 1 pto)",
+    "scoringWrong": "Risultato sbagliato (Gironi: 0 pti | R32+: 1 pto)"
   },
   "admin": {
     "title": "Gestione Partite",
