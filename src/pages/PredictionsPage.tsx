@@ -416,7 +416,7 @@ export function PredictionsPage() {
                           <div className="text-center px-2">
                             {match.status === 'completed' || isMatchLive(match) ? (
                               <span className="text-xl font-bold">
-                                {isKnockoutStage(match.stage) && match.home_score != null ? (
+                                {isKnockoutStage(match.stage) && match.home_score != null && match.away_score != null ? (
                                   match.home_score > match.away_score ? (
                                     <span className="text-sm text-primary">{getTeamName(match.home_team!, i18n.language)}</span>
                                   ) : (

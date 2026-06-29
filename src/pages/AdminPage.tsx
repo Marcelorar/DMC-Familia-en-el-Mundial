@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { cn } from '@/lib/utils'
 import { toast } from '@/hooks/use-toast'
 import { format } from 'date-fns'
 import { ThumbsUp, ThumbsDown, Plus, Edit, Flag } from 'lucide-react'
@@ -697,7 +696,10 @@ export function AdminPage() {
                         className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                       >
                         <span className="text-sm font-semibold truncate w-full text-center">
-                          {form.home_team_id ? getTeamName(teams.find(t => String(t.id) === form.home_team_id), i18n.language) : t('admin.homeTeam')}
+                          {form.home_team_id ? (() => {
+                            const team = teams.find(t => String(t.id) === form.home_team_id);
+                            return team ? getTeamName(team, i18n.language) : t('admin.homeTeam');
+                          })() : t('admin.homeTeam')}
                         </span>
                       </Label>
                     </div>
@@ -708,7 +710,10 @@ export function AdminPage() {
                         className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
                       >
                         <span className="text-sm font-semibold truncate w-full text-center">
-                          {form.away_team_id ? getTeamName(teams.find(t => String(t.id) === form.away_team_id), i18n.language) : t('admin.awayTeam')}
+                          {form.away_team_id ? (() => {
+                            const team = teams.find(t => String(t.id) === form.away_team_id);
+                            return team ? getTeamName(team, i18n.language) : t('admin.awayTeam');
+                          })() : t('admin.awayTeam')}
                         </span>
                       </Label>
                     </div>
