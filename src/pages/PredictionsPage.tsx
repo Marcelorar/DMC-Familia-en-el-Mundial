@@ -37,7 +37,7 @@ export function PredictionsPage() {
   const [teams, setTeams] = useState<Team[]>([])
   const [predictions, setPredictions] = useState<Record<string | number, Prediction>>({})
   const [loading, setLoading] = useState(true)
-  const [activeStage, setActiveStage] = useState<TournamentStage>('R32')
+  const [activeStage, setActiveStage] = useState<TournamentStage>('R16')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
   const [homeScore, setHomeScore] = useState('')
