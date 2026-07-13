@@ -87,7 +87,7 @@ export function AdminPage() {
   const [formErrors, setFormErrors] = useState<Partial<Record<keyof MatchFormData, string>>>({})
   const [finishErrors, setFinishErrors] = useState<{ home?: string; away?: string }>({})
 
-  const [expandedStages, setExpandedStages] = useState<TournamentStage[]>(['QF'])
+  const [expandedStages, setExpandedStages] = useState<TournamentStage[]>(['SF'])
 
   useEffect(() => {
     fetchAll()
