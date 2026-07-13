@@ -295,7 +295,12 @@ export function AdminPage() {
   async function applyChangeRequest(request: MatchChangeRequest) {
     const data = request.proposed_data
     if (request.request_type === 'create') {
-      await supabase.from('matches').insert(data)
+      const { error: insertError } = await supabase.from('matches').insert(data)
+      if (insertError) {
+        console.error('Error creating match:', insertError)
+        toast({ title: t('common.error'), variant: 'destructive' })
+        return
+      }
       await supabase.from('match_change_requests').update({ status: 'approved' }).eq('id', request.id)
     } else if (request.request_type === 'finish' && request.match_id) {
       // Offload match update + prediction grading to an Edge Function to avoid blocking the UI
@@ -312,7 +317,12 @@ export function AdminPage() {
         return
       }
     } else if (request.match_id) {
-      await supabase.from('matches').update(data).eq('id', request.match_id)
+      const { error: updateError } = await supabase.from('matches').update(data).eq('id', request.match_id)
+      if (updateError) {
+        console.error('Error updating match:', updateError)
+        toast({ title: t('common.error'), variant: 'destructive' })
+        return
+      }
       await supabase.from('match_change_requests').update({ status: 'approved' }).eq('id', request.id)
     }
   }
